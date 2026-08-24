@@ -11,38 +11,35 @@ A lightweight, modern, full-stack Expense Tracker built to help you manage your 
 ## 🛠️ Tech Stack
 - **Frontend:** HTML5, CSS3 (Custom styling with CSS Variables), Vanilla JavaScript.
 - **Backend:** Python, FastAPI.
-- **Database:** SQLite (with SQLAlchemy ORM).
+- **Database:** SQLite locally, Postgres (Neon) in production.
 - **Libraries:** Chart.js (for data visualization).
 
 ## 🚀 Getting Started
 
-### Prerequisites
-Make sure you have Python installed on your machine. You will also need to install the backend dependencies.
-
-### 1. Setup the Backend
-Open your terminal and navigate to the project directory:
 ```bash
 cd ExpenseTracker
-```
-
-Install the required Python packages:
-```bash
-pip install fastapi uvicorn sqlalchemy pydantic
-```
-
-Run the FastAPI server:
-```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 uvicorn backend.main:app --reload
 ```
-The API will be available at `http://127.0.0.1:8000`.
 
-### 2. Run the Frontend
-Since the frontend uses plain HTML/JS/CSS, no build step or node server is required! 
-Simply double-click on `frontend/index.html` to open it in your browser.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Local data is stored in SQLite under `data/`.
+
+## ☁️ Deploy (Render + Neon)
+
+1. Create a Postgres database at [https://console.neon.tech](https://console.neon.tech). Copy the **direct** connection string (`postgresql://...`).
+2. Push this repo to GitHub.
+3. On [Render](https://dashboard.render.com), create a Blueprint from the repo (or open `https://dashboard.render.com/blueprint/new?repo=<YOUR_GITHUB_REPO_URL>`).
+4. When prompted, paste the Neon URL into `DATABASE_URL`.
+5. After deploy, open the `onrender.com` URL.
+
+On Render, the app reads `DATABASE_URL`. If it is unset, it falls back to SQLite.
 
 ## 📂 Project Structure
 ```
-ExpenseTracker/
+├── render.yaml
+├── requirements.txt
 ├── backend/
 │   ├── main.py        # FastAPI application and endpoints
 │   ├── database.py    # SQLite database connection setup
