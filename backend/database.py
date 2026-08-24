@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -12,6 +13,7 @@ def get_database_url() -> str:
     if not url:
         os.makedirs(DATA_DIR, exist_ok=True)
         return f"sqlite:///{os.path.join(DATA_DIR, 'expenses.db')}"
+    url = url.replace("&channel_binding=require", "").replace("channel_binding=require&", "")
     if url.startswith("postgres://"):
         url = "postgresql+psycopg2://" + url[len("postgres://"):]
     elif url.startswith("postgresql://") and "+psycopg2://" not in url:
@@ -25,6 +27,8 @@ IS_SQLITE = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
 engine_kwargs = {"pool_pre_ping": True}
 if IS_SQLITE:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+elif "-pooler" in SQLALCHEMY_DATABASE_URL or "neon.tech" in SQLALCHEMY_DATABASE_URL:
+    engine_kwargs["poolclass"] = NullPool
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
