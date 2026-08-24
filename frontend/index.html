@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#F7F7F5">
+    <title>รายรับ-รายจ่าย</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="topnav">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <i data-lucide="wallet"></i>
+                <span>รายรับ-รายจ่าย</span>
+            </div>
+            <div class="nav-actions">
+                <button type="button" class="nav-btn nav-btn-primary" onclick="openModal('transactionModal')" aria-label="เพิ่มรายการ">
+                    <i data-lucide="plus"></i>
+                    <span class="nav-btn-label">เพิ่มรายการ</span>
+                </button>
+                <button type="button" class="nav-btn" onclick="openModal('categoryModal')" aria-label="หมวดหมู่">
+                    <i data-lucide="tags"></i>
+                    <span class="nav-btn-label">หมวดหมู่</span>
+                </button>
+                <button type="button" class="nav-btn" onclick="openModal('ownerModal')" aria-label="ผู้ทำรายการ">
+                    <i data-lucide="users"></i>
+                    <span class="nav-btn-label">ผู้ทำรายการ</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="card overview">
+            <div class="overview-header">
+                <h2>ภาพรวม</h2>
+                <div class="filter-control" id="chartFilter"></div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="stat-card">
+                    <span class="stat-label">รายรับ</span>
+                    <span class="stat-value income" id="statIncome">฿0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">รายจ่าย</span>
+                    <span class="stat-value expense" id="statExpense">฿0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">คงเหลือ</span>
+                    <span class="stat-value" id="statBalance">฿0</span>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <div class="chart-box-head">
+                    <h3>แนวโน้ม</h3>
+                    <span class="chart-hint" id="trendHint"></span>
+                </div>
+                <div class="chart-container-large">
+                    <canvas id="balanceChart"></canvas>
+                    <div class="chart-empty" id="trendEmpty">ยังไม่มีข้อมูล</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-box">
+                    <div class="chart-box-head">
+                        <h3>สัดส่วนรายรับ</h3>
+                        <span class="chart-total income" id="incomeChartTotal"></span>
+                    </div>
+                    <div class="doughnut-layout">
+                        <div class="chart-container-small">
+                            <canvas id="incomeChart"></canvas>
+                            <div class="chart-empty" id="incomeEmpty">ยังไม่มีข้อมูล</div>
+                        </div>
+                        <ul class="chart-legend" id="incomeLegend"></ul>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-box-head">
+                        <h3>สัดส่วนรายจ่าย</h3>
+                        <span class="chart-total expense" id="expenseChartTotal"></span>
+                    </div>
+                    <div class="doughnut-layout">
+                        <div class="chart-container-small">
+                            <canvas id="expenseChart"></canvas>
+                            <div class="chart-empty" id="expenseEmpty">ยังไม่มีข้อมูล</div>
+                        </div>
+                        <ul class="chart-legend" id="expenseLegend"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="lists-container">
+            <section class="card list-card">
+                <div class="list-header">
+                    <h2 class="text-income">รายรับ</h2>
+                    <button type="button" class="delete-all-btn" id="deleteAllIncomeBtn" onclick="deleteAllByType('income')" disabled>
+                        <i data-lucide="trash-2"></i>
+                        <span class="btn-label">ลบทั้งหมด</span>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="txn-table">
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>ผู้บันทึก</th>
+                                <th>รายการ</th>
+                                <th>หมวดหมู่</th>
+                                <th>จำนวน</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeList"></tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="card list-card">
+                <div class="list-header">
+                    <h2 class="text-expense">รายจ่าย</h2>
+                    <button type="button" class="delete-all-btn" id="deleteAllExpenseBtn" onclick="deleteAllByType('expense')" disabled>
+                        <i data-lucide="trash-2"></i>
+                        <span class="btn-label">ลบทั้งหมด</span>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="txn-table">
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>ผู้บันทึก</th>
+                                <th>รายการ</th>
+                                <th>หมวดหมู่</th>
+                                <th>จำนวน</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseList"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal-card theme-expense" id="modalCard">
+            <button class="modal-close" onclick="closeModal('transactionModal')" aria-label="ปิด">
+                <i data-lucide="x"></i>
+            </button>
+            <h2><i data-lucide="plus-circle"></i> เพิ่มรายการ</h2>
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label>ประเภท</label>
+                    <div class="segmented-control type-control">
+                        <button type="button" class="segment-btn active" id="btnExpense" data-value="expense">รายจ่าย</button>
+                        <button type="button" class="segment-btn" id="btnIncome" data-value="income">รายรับ</button>
+                        <input type="hidden" id="transactionType" value="expense">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transactionOwner">ผู้บันทึก</label>
+                    <div class="combo" id="ownerCombo">
+                        <input type="text" id="transactionOwner" placeholder="พิมพ์ชื่อ หรือเลือก" autocomplete="off" required>
+                        <button type="button" class="combo-chevron" tabindex="-1" aria-label="เปิดรายการ">
+                            <i data-lucide="chevron-down"></i>
+                        </button>
+                        <ul class="combo-menu" hidden></ul>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="title">ชื่อรายการ</label>
+                    <input type="text" id="title" placeholder="เช่น ค่าอาหารกลางวัน" required>
+                </div>
+                <div class="form-group">
+                    <label for="amount">จำนวนเงิน (฿)</label>
+                    <input type="text" id="amount" inputmode="decimal" placeholder="0" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">หมวดหมู่</label>
+                    <div class="combo" id="categoryCombo">
+                        <input type="text" id="category" placeholder="พิมพ์หมวดหมู่ หรือเลือก" autocomplete="off" required>
+                        <button type="button" class="combo-chevron" tabindex="-1" aria-label="เปิดรายการ">
+                            <i data-lucide="chevron-down"></i>
+                        </button>
+                        <ul class="combo-menu" hidden></ul>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="submitBtn">บันทึก</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeModal('categoryModal')" aria-label="ปิด">
+                <i data-lucide="x"></i>
+            </button>
+            <h2><i data-lucide="tags"></i> หมวดหมู่</h2>
+            <div class="modal-section">
+                <label>เพิ่มหมวดหมู่</label>
+                <div class="inline-form">
+                    <input type="text" id="newCategoryName" placeholder="ชื่อหมวดหมู่">
+                    <div class="select" id="newCategoryTypeSelect">
+                        <button type="button" class="select-trigger">
+                            <span>รายจ่าย</span>
+                            <i data-lucide="chevron-down"></i>
+                        </button>
+                        <ul class="select-menu" hidden>
+                            <li data-value="expense" class="is-selected">รายจ่าย</li>
+                            <li data-value="income">รายรับ</li>
+                        </ul>
+                        <input type="hidden" id="newCategoryType" value="expense">
+                    </div>
+                    <button type="button" class="btn btn-sm" onclick="addCustomCategory()">เพิ่ม</button>
+                </div>
+            </div>
+            <div class="modal-section">
+                <h3>รายรับ</h3>
+                <div class="chips-container" id="incomeCategoryChips"></div>
+            </div>
+            <div class="modal-section">
+                <h3>รายจ่าย</h3>
+                <div class="chips-container" id="expenseCategoryChips"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="ownerModal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeModal('ownerModal')" aria-label="ปิด">
+                <i data-lucide="x"></i>
+            </button>
+            <h2><i data-lucide="users"></i> ผู้ทำรายการ</h2>
+            <div class="modal-section">
+                <label>เพิ่มผู้ทำรายการ</label>
+                <div class="inline-form">
+                    <input type="text" id="newOwnerName" placeholder="ชื่อ">
+                    <button type="button" class="btn btn-sm" onclick="addCustomOwner()">เพิ่ม</button>
+                </div>
+            </div>
+            <div class="modal-section">
+                <h3>ทั้งหมด</h3>
+                <div class="chips-container" id="ownerChips"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
