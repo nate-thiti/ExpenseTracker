@@ -529,6 +529,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTypeSelector();
     setupAmountInput();
     setupDropdowns();
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', event => {
+            if (event.target === modal) closeModal(modal.id);
+        });
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            const activeModal = document.querySelector('.modal-overlay.active');
+            if (activeModal) closeModal(activeModal.id);
+        }
+    });
     fetchReferenceData().then(fetchTransactions).catch(error => {
         console.error('Error fetching owners/categories:', error);
         alert('ไม่สามารถโหลดผู้ทำรายการและหมวดหมู่จากฐานข้อมูลได้');

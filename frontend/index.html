@@ -15,7 +15,7 @@
         <div class="nav-inner">
             <div class="nav-brand">
                 <i data-lucide="wallet"></i>
-                <span>รายรับ-รายจ่าย</span>
+                <span>Expense Tracker</span>
             </div>
             <div class="nav-actions">
                 <button type="button" class="nav-btn nav-btn-primary" onclick="openModal('transactionModal')" aria-label="เพิ่มรายการ">
@@ -37,7 +37,10 @@
     <div class="container">
         <section class="card overview">
             <div class="overview-header">
-                <h2>ภาพรวม</h2>
+                <div>
+                    <p class="eyebrow">การเงินของคุณ</p>
+                    <h1>ภาพรวม</h1>
+                </div>
                 <div class="filter-control" id="chartFilter"></div>
             </div>
 
@@ -181,6 +184,7 @@
                 <div class="form-group">
                     <label for="amount">จำนวนเงิน (฿)</label>
                     <input type="text" id="amount" inputmode="decimal" placeholder="0" autocomplete="off" required>
+                    <span class="field-hint">ใส่จำนวนเงินเป็นบาท</span>
                 </div>
                 <div class="form-group">
                     <label for="category">หมวดหมู่</label>

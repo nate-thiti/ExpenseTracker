@@ -13,6 +13,8 @@
     --nav-h: 56px;
     --radius: 12px;
     --tap: 44px;
+    --shadow: 0 12px 32px rgba(31, 35, 32, 0.06);
+    --shadow-lg: 0 24px 70px rgba(31, 35, 32, 0.16);
 }
 
 * {
@@ -38,6 +40,7 @@ body {
     line-height: 1.5;
     padding-top: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
     min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
 }
 
 /* ====== NAV ====== */
@@ -109,7 +112,7 @@ body {
     font-weight: 500;
     cursor: pointer;
     color: var(--text);
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -121,6 +124,7 @@ body {
 
 .nav-btn:hover {
     background: #EFEFEA;
+    transform: translateY(-1px);
 }
 
 .nav-btn-primary {
@@ -132,6 +136,17 @@ body {
 .nav-btn-primary:hover {
     background: var(--primary-hover);
     border-color: var(--primary-hover);
+}
+
+.nav-btn:focus-visible,
+.filter-btn:focus-visible,
+.delete-btn:focus-visible,
+.modal-close:focus-visible,
+.chip-remove:focus-visible,
+.btn:focus-visible,
+.segment-btn:focus-visible {
+    outline: 3px solid rgba(31, 122, 92, 0.22);
+    outline-offset: 2px;
 }
 
 /* ====== LAYOUT ====== */
@@ -147,14 +162,26 @@ body {
     padding: 1.5rem;
     border: 1px solid var(--border);
     margin-bottom: 1.25rem;
+    box-shadow: var(--shadow);
 }
 
 .card h2,
-.overview-header h2,
+.overview-header h1,
 .list-header h2 {
     font-size: 0.95rem;
     font-weight: 500;
     letter-spacing: 0.01em;
+}
+
+.overview-header h1 {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+}
+
+.eyebrow {
+    color: var(--muted);
+    font-size: 0.7rem;
+    margin-bottom: 0.05rem;
 }
 
 .overview {
@@ -218,6 +245,13 @@ body {
     flex-direction: column;
     gap: 0.25rem;
     min-width: 0;
+    background: linear-gradient(145deg, #fff, #fcfcfa);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(31, 35, 32, 0.06);
 }
 
 .stat-label {
@@ -438,6 +472,9 @@ body {
     border-bottom: none;
 }
 
+.txn-table tbody tr { transition: background 0.15s ease; }
+.txn-table tbody tr:hover { background: #fcfcfa; }
+
 .txn-table td.amount {
     font-variant-numeric: tabular-nums;
     font-weight: 500;
@@ -512,7 +549,9 @@ body {
     position: fixed;
     inset: 0;
     z-index: 200;
-    background: rgba(0, 0, 0, 0.28);
+    background: rgba(24, 28, 25, 0.36);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     justify-content: center;
     align-items: center;
     padding: 1.25rem;
@@ -520,6 +559,7 @@ body {
 
 .modal-overlay.active {
     display: flex;
+    animation: fade-in 0.18s ease-out;
 }
 
 .modal-card {
@@ -531,7 +571,12 @@ body {
     max-height: 88vh;
     overflow-y: auto;
     position: relative;
+    box-shadow: var(--shadow-lg);
+    animation: modal-in 0.2s ease-out;
 }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 .modal-card h2 {
     display: flex;
@@ -617,6 +662,14 @@ input, select {
 input:focus, select:focus {
     outline: none;
     border-color: var(--text);
+    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.07);
+}
+
+.field-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 0.7rem;
+    margin-top: 0.3rem;
 }
 
 .segmented-control {
@@ -638,6 +691,7 @@ input:focus, select:focus {
     cursor: pointer;
     color: var(--muted);
     min-height: var(--tap);
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .type-control .segment-btn.active[data-value="expense"] {
@@ -668,6 +722,8 @@ input:focus, select:focus {
 
 .btn:hover {
     background: var(--primary-hover);
+    transform: translateY(-1px);
+    filter: brightness(1.03);
 }
 
 .theme-expense .btn { background: var(--expense); }
@@ -853,7 +909,10 @@ input:focus, select:focus {
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text);
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
+
+.chip:hover { border-color: #cfcfca; background: #f1f1ed; }
 
 .chip.chip-custom {
     background: var(--card);
