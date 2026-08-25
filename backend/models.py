@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, UniqueConstraint
 from datetime import datetime
 from .database import Base
 
@@ -12,3 +12,19 @@ class Expense(Base):
     amount = Column(Float)
     category = Column(String, index=True)
     date = Column(DateTime, default=datetime.utcnow)
+
+
+class Owner(Base):
+    __tablename__ = "owners"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+
+
+class Category(Base):
+    __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("name", "type", name="uq_categories_name_type"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True, nullable=False)
+    type = Column(String, index=True, nullable=False)

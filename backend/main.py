@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from . import models, schemas
 from .database import engine, get_db, migrate_schema, FRONTEND_DIR
@@ -24,6 +25,68 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/owners", response_model=List[schemas.Owner])
+def read_owners(db: Session = Depends(get_db)):
+    return db.query(models.Owner).order_by(models.Owner.id).all()
+
+
+@app.post("/api/owners", response_model=schemas.Owner, status_code=201)
+def create_owner(owner: schemas.OwnerCreate, db: Session = Depends(get_db)):
+    name = owner.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Owner name is required")
+    db_owner = models.Owner(name=name)
+    db.add(db_owner)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Owner already exists")
+    db.refresh(db_owner)
+    return db_owner
+
+
+@app.delete("/api/owners/{owner_id}")
+def delete_owner(owner_id: int, db: Session = Depends(get_db)):
+    owner = db.query(models.Owner).filter(models.Owner.id == owner_id).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    db.delete(owner)
+    db.commit()
+    return {"message": "Owner deleted successfully"}
+
+
+@app.get("/api/categories", response_model=List[schemas.Category])
+def read_categories(db: Session = Depends(get_db)):
+    return db.query(models.Category).order_by(models.Category.type, models.Category.id).all()
+
+
+@app.post("/api/categories", response_model=schemas.Category, status_code=201)
+def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    name, category_type = category.name.strip(), category.type.strip()
+    if not name or category_type not in {"income", "expense"}:
+        raise HTTPException(status_code=422, detail="Valid category name and type are required")
+    db_category = models.Category(name=name, type=category_type)
+    db.add(db_category)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Category already exists")
+    db.refresh(db_category)
+    return db_category
+
+
+@app.delete("/api/categories/{category_id}")
+def delete_category(category_id: int, db: Session = Depends(get_db)):
+    category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(category)
+    db.commit()
+    return {"message": "Category deleted successfully"}
 
 @app.get("/api/expenses", response_model=List[schemas.Expense])
 def read_expenses(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):

@@ -6,6 +6,8 @@ let expenseChart = null;
 let balanceChart = null;
 
 let allTransactions = [];
+let owners = [];
+let categories = [];
 let currentFilter = 'all';
 
 // ====== Default Categories ======
@@ -109,59 +111,21 @@ function chipHtml(label, onClick) {
     return `<span class="chip">${escapeHtml(label)} <button type="button" class="chip-remove" title="ลบ" onclick="${onClick}"><i data-lucide="x"></i></button></span>`;
 }
 
-// ====== localStorage Helpers ======
-function getCustomCategories() {
-    return JSON.parse(localStorage.getItem('customCategories') || '{"income":[],"expense":[]}');
-}
-
-function saveCustomCategories(data) {
-    localStorage.setItem('customCategories', JSON.stringify(data));
-}
-
-function getHiddenCategories() {
-    return JSON.parse(localStorage.getItem('hiddenCategories') || '{"income":[],"expense":[]}');
-}
-
-function saveHiddenCategories(data) {
-    localStorage.setItem('hiddenCategories', JSON.stringify(data));
-}
-
-function getCustomOwners() {
-    return JSON.parse(localStorage.getItem('customOwners') || '[]');
-}
-
-function saveCustomOwners(data) {
-    localStorage.setItem('customOwners', JSON.stringify(data));
-}
-
-function getHiddenOwners() {
-    return JSON.parse(localStorage.getItem('hiddenOwners') || '[]');
-}
-
-function saveHiddenOwners(data) {
-    localStorage.setItem('hiddenOwners', JSON.stringify(data));
-}
-
 function getAllCategories(type) {
-    const custom = getCustomCategories();
-    const hiddenDefaults = new Set((getHiddenCategories()[type] || []).filter(h => defaultCategories[type].includes(h)));
-    const fromDB = new Set();
-    allTransactions.forEach(t => {
-        if (t.type === type && t.category) fromDB.add(t.category);
-    });
-    const defaultsVisible = defaultCategories[type].filter(c => !hiddenDefaults.has(c));
-    return [...new Set([...defaultsVisible, ...(custom[type] || []), ...fromDB])];
+    return categories.filter(c => c.type === type).map(c => c.name);
 }
 
 function getAllOwners() {
-    const custom = getCustomOwners();
-    const hiddenDefaults = new Set(getHiddenOwners().filter(h => defaultOwners.includes(h)));
-    const fromDB = new Set();
-    allTransactions.forEach(t => {
-        if (t.owner) fromDB.add(t.owner);
-    });
-    const defaultsVisible = defaultOwners.filter(o => !hiddenDefaults.has(o));
-    return [...new Set([...defaultsVisible, ...custom, ...fromDB])];
+    return owners.map(o => o.name);
+}
+
+async function fetchReferenceData() {
+    const [ownersResponse, categoriesResponse] = await Promise.all([
+        fetch(`${API_URL}/owners`), fetch(`${API_URL}/categories`)
+    ]);
+    if (!ownersResponse.ok || !categoriesResponse.ok) throw new Error('reference data fetch failed');
+    owners = await ownersResponse.json();
+    categories = await categoriesResponse.json();
 }
 
 async function bulkDelete({ type, category, owner } = {}) {
@@ -195,7 +159,7 @@ function closeModal(id) {
 }
 
 // ====== Category Management (Modal) ======
-function addCustomCategory() {
+async function addCustomCategory() {
     const nameInput = document.getElementById('newCategoryName');
     const typeSelect = document.getElementById('newCategoryType');
     const name = nameInput.value.trim();
@@ -203,26 +167,19 @@ function addCustomCategory() {
 
     if (!name) return;
 
-    const hidden = getHiddenCategories();
-    if ((hidden[type] || []).includes(name)) {
-        hidden[type] = hidden[type].filter(c => c !== name);
-        saveHiddenCategories(hidden);
-    } else {
-        const custom = getCustomCategories();
-        if (!custom[type].includes(name) && !defaultCategories[type].includes(name)) {
-            custom[type].push(name);
-            saveCustomCategories(custom);
-        }
-    }
-
-    nameInput.value = '';
-    renderCategoryChips();
-    updateDatalists();
+    try {
+        const response = await fetch(`${API_URL}/categories`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, type}) });
+        if (!response.ok) throw new Error('category create failed');
+        categories.push(await response.json());
+        nameInput.value = '';
+        renderCategoryChips(); updateDatalists();
+    } catch (e) { console.error(e); alert('ไม่สามารถเพิ่มหมวดหมู่ได้'); }
 }
 
 async function removeCategory(type, encodedName) {
     const name = decodeURIComponent(encodedName);
     const related = allTransactions.filter(t => t.type === type && t.category === name);
+    const category = categories.find(c => c.type === type && c.name === name);
     const msg = related.length
         ? `มี ${related.length} รายการในหมวดหมู่ "${name}" ต้องการลบหมวดหมู่และรายการที่เกี่ยวข้องหรือไม่?`
         : `ต้องการลบหมวดหมู่ "${name}" หรือไม่?`;
@@ -233,15 +190,10 @@ async function removeCategory(type, encodedName) {
             await bulkDelete({ type, category: name });
         }
 
-        const custom = getCustomCategories();
-        custom[type] = (custom[type] || []).filter(c => c !== name);
-        saveCustomCategories(custom);
-
-        if (defaultCategories[type].includes(name)) {
-            const hidden = getHiddenCategories();
-            if (!hidden[type].includes(name)) hidden[type].push(name);
-            saveHiddenCategories(hidden);
-        }
+        if (!category) throw new Error('category not found');
+        const response = await fetch(`${API_URL}/categories/${category.id}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('category delete failed');
+        categories = categories.filter(c => c.id !== category.id);
 
         if (related.length) {
             await fetchTransactions();
@@ -256,7 +208,6 @@ async function removeCategory(type, encodedName) {
 }
 
 function renderCategoryChips() {
-    const custom = getCustomCategories();
 
     const incomeContainer = document.getElementById('incomeCategoryChips');
     const incomeCats = getAllCategories('income');
@@ -271,40 +222,25 @@ function renderCategoryChips() {
         : '<p class="empty-hint">ยังไม่มีหมวดหมู่</p>';
 
     incomeCats.forEach((cat, i) => {
-        if (custom.income.includes(cat) && incomeContainer.children[i]) {
-            incomeContainer.children[i].classList.add('chip-custom');
-        }
     });
     expenseCats.forEach((cat, i) => {
-        if (custom.expense.includes(cat) && expenseContainer.children[i]) {
-            expenseContainer.children[i].classList.add('chip-custom');
-        }
     });
 
     refreshIcons();
 }
 
 // ====== Owner Management (Modal) ======
-function addCustomOwner() {
+async function addCustomOwner() {
     const nameInput = document.getElementById('newOwnerName');
     const name = nameInput.value.trim();
     if (!name) return;
 
-    const hidden = getHiddenOwners();
-    if (hidden.includes(name)) {
-        saveHiddenOwners(hidden.filter(o => o !== name));
-    } else {
-        const custom = getCustomOwners();
-        if (!custom.includes(name) && !defaultOwners.includes(name)) {
-            custom.push(name);
-            saveCustomOwners(custom);
-        }
-    }
-
-    nameInput.value = '';
-    renderOwnerChips();
-    updateDatalists();
-    updateFilterButtons();
+    try {
+        const response = await fetch(`${API_URL}/owners`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) });
+        if (!response.ok) throw new Error('owner create failed');
+        owners.push(await response.json());
+        nameInput.value = ''; renderOwnerChips(); updateDatalists(); updateFilterButtons();
+    } catch (e) { console.error(e); alert('ไม่สามารถเพิ่มผู้ทำรายการได้'); }
 }
 
 async function removeOwner(encodedName) {
@@ -320,13 +256,11 @@ async function removeOwner(encodedName) {
             await bulkDelete({ owner: name });
         }
 
-        saveCustomOwners(getCustomOwners().filter(o => o !== name));
-
-        if (defaultOwners.includes(name)) {
-            const hidden = getHiddenOwners();
-            if (!hidden.includes(name)) hidden.push(name);
-            saveHiddenOwners(hidden);
-        }
+        const owner = owners.find(o => o.name === name);
+        if (!owner) throw new Error('owner not found');
+        const response = await fetch(`${API_URL}/owners/${owner.id}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('owner delete failed');
+        owners = owners.filter(o => o.id !== owner.id);
 
         if (currentFilter === name) currentFilter = 'all';
 
@@ -346,7 +280,6 @@ async function removeOwner(encodedName) {
 function renderOwnerChips() {
     const container = document.getElementById('ownerChips');
     const owners = getAllOwners();
-    const custom = getCustomOwners();
 
     if (!owners.length) {
         container.innerHTML = '<p class="empty-hint">ยังไม่มีผู้ทำรายการ</p>';
@@ -356,9 +289,6 @@ function renderOwnerChips() {
 
     container.innerHTML = owners.map(o => chipHtml(o, `removeOwner('${encodeURIComponent(o)}')`)).join('');
     owners.forEach((o, i) => {
-        if (custom.includes(o) && container.children[i]) {
-            container.children[i].classList.add('chip-custom');
-        }
     });
     refreshIcons();
 }
@@ -599,7 +529,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTypeSelector();
     setupAmountInput();
     setupDropdowns();
-    fetchTransactions();
+    fetchReferenceData().then(fetchTransactions).catch(error => {
+        console.error('Error fetching owners/categories:', error);
+        alert('ไม่สามารถโหลดผู้ทำรายการและหมวดหมู่จากฐานข้อมูลได้');
+    });
 
     document.getElementById('expenseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -675,6 +608,7 @@ function resetFormType() {
 async function fetchTransactions() {
     try {
         const response = await fetch(`${API_URL}/expenses`);
+        if (!response.ok) throw new Error('expenses fetch failed');
         allTransactions = await response.json();
         updateDatalists();
         updateFilterButtons();
