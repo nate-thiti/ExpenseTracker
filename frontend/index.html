@@ -157,7 +157,7 @@
             <button class="modal-close" onclick="closeModal('transactionModal')" aria-label="ปิด">
                 <i data-lucide="x"></i>
             </button>
-            <h2><i data-lucide="plus-circle"></i> เพิ่มรายการ</h2>
+            <h2 id="transactionModalTitle"><i data-lucide="plus-circle"></i> เพิ่มรายการ</h2>
             <form id="expenseForm">
                 <div class="form-group">
                     <label>ประเภท</label>
@@ -255,6 +255,20 @@
             </div>
         </div>
     </div>
+
+    <div class="modal-overlay" id="confirmModal" aria-hidden="true">
+        <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <div class="confirm-icon"><i data-lucide="triangle-alert"></i></div>
+            <h2 id="confirmTitle">ยืนยันการลบ</h2>
+            <p id="confirmMessage"></p>
+            <div class="confirm-actions">
+                <button type="button" class="btn btn-secondary" id="confirmCancelBtn">ยกเลิก</button>
+                <button type="button" class="btn btn-danger" id="confirmOkBtn">ยืนยันลบ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 
     <script src="app.js"></script>
 </body>

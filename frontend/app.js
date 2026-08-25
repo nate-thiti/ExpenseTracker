@@ -9,6 +9,8 @@ let allTransactions = [];
 let owners = [];
 let categories = [];
 let currentFilter = 'all';
+let editingTransactionId = null;
+let confirmResolver = null;
 
 // ====== Default Categories ======
 const defaultCategories = {
@@ -150,6 +152,45 @@ function openModal(id) {
     if (id === 'transactionModal') updateDatalists();
 }
 
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}"></i><span>${escapeHtml(message)}</span>`;
+    document.getElementById('toastRegion').appendChild(toast);
+    refreshIcons();
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 180); }, 2600);
+}
+
+function requestConfirmation(message) {
+    return new Promise(resolve => {
+        confirmResolver = resolve;
+        document.getElementById('confirmMessage').textContent = message;
+        openModal('confirmModal');
+    });
+}
+
+function finishConfirmation(result) {
+    closeModal('confirmModal');
+    if (confirmResolver) confirmResolver(result);
+    confirmResolver = null;
+}
+
+function editTransaction(id) {
+    const transaction = allTransactions.find(t => t.id === id);
+    if (!transaction) return;
+    editingTransactionId = id;
+    document.getElementById('transactionModalTitle').innerHTML = '<i data-lucide="pencil"></i> แก้ไขรายการ';
+    document.getElementById('submitBtn').textContent = 'บันทึกการแก้ไข';
+    document.getElementById('transactionOwner').value = transaction.owner || '';
+    document.getElementById('title').value = transaction.title || '';
+    document.getElementById('amount').value = formatAmountInput(String(transaction.amount));
+    document.getElementById('category').value = transaction.category || '';
+    document.getElementById(transaction.type === 'income' ? 'btnIncome' : 'btnExpense').click();
+    openModal('transactionModal');
+    refreshIcons();
+}
+
 function closeModal(id) {
     document.getElementById(id).classList.remove('active');
     closeAllMenus();
@@ -183,7 +224,7 @@ async function removeCategory(type, encodedName) {
     const msg = related.length
         ? `มี ${related.length} รายการในหมวดหมู่ "${name}" ต้องการลบหมวดหมู่และรายการที่เกี่ยวข้องหรือไม่?`
         : `ต้องการลบหมวดหมู่ "${name}" หรือไม่?`;
-    if (!confirm(msg)) return;
+    if (!await requestConfirmation(msg)) return;
 
     try {
         if (related.length) {
@@ -249,7 +290,7 @@ async function removeOwner(encodedName) {
     const msg = related.length
         ? `มี ${related.length} รายการของผู้ทำรายการ "${name}" ต้องการลบชื่อนี้และรายการที่เกี่ยวข้องหรือไม่?`
         : `ต้องการลบผู้ทำรายการ "${name}" หรือไม่?`;
-    if (!confirm(msg)) return;
+    if (!await requestConfirmation(msg)) return;
 
     try {
         if (related.length) {
@@ -531,15 +572,23 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDropdowns();
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', event => {
-            if (event.target === modal) closeModal(modal.id);
+            if (event.target === modal) {
+                if (modal.id === 'confirmModal') finishConfirmation(false);
+                else closeModal(modal.id);
+            }
         });
     });
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape') {
             const activeModal = document.querySelector('.modal-overlay.active');
-            if (activeModal) closeModal(activeModal.id);
+            if (activeModal) {
+                if (activeModal.id === 'confirmModal') finishConfirmation(false);
+                else closeModal(activeModal.id);
+            }
         }
     });
+    document.getElementById('confirmCancelBtn').addEventListener('click', () => finishConfirmation(false));
+    document.getElementById('confirmOkBtn').addEventListener('click', () => finishConfirmation(true));
     fetchReferenceData().then(fetchTransactions).catch(error => {
         console.error('Error fetching owners/categories:', error);
         alert('ไม่สามารถโหลดผู้ทำรายการและหมวดหมู่จากฐานข้อมูลได้');
@@ -560,17 +609,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/expenses`, {
-                method: 'POST',
+            const response = await fetch(`${API_URL}/expenses${editingTransactionId ? `/${editingTransactionId}` : ''}`, {
+                method: editingTransactionId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type, owner, title, amount, category })
             });
 
             if (response.ok) {
+                const wasEditing = Boolean(editingTransactionId);
                 document.getElementById('expenseForm').reset();
                 resetFormType();
                 closeModal('transactionModal');
-                fetchTransactions();
+                await fetchTransactions();
+                showToast(wasEditing ? 'แก้ไขรายการเรียบร้อยแล้ว' : 'บันทึกรายการเรียบร้อยแล้ว');
             } else {
                 alert('เกิดข้อผิดพลาดในการเพิ่มรายการ');
             }
@@ -612,6 +663,10 @@ function resetFormType() {
     document.getElementById('transactionType').value = 'expense';
     document.getElementById('modalCard').className = 'modal-card theme-expense';
     document.getElementById('transactionOwner').value = '';
+    editingTransactionId = null;
+    document.getElementById('transactionModalTitle').innerHTML = '<i data-lucide="plus-circle"></i> เพิ่มรายการ';
+    document.getElementById('submitBtn').textContent = 'บันทึก';
+    refreshIcons();
     updateDatalists();
 }
 
@@ -675,7 +730,7 @@ function renderTables(transactions) {
             <td data-label="รายการ">${escapeHtml(t.title)}</td>
             <td data-label="หมวดหมู่"><span class="cat-cell"><span class="cat-dot" style="background:${catColor}"></span>${escapeHtml(t.category)}</span></td>
             <td data-label="จำนวน" class="amount ${t.type}">${formatBaht(t.amount)}</td>
-            <td class="actions"><button type="button" class="delete-btn" title="ลบรายการ" onclick="deleteTransaction(${t.id})"><i data-lucide="trash-2"></i></button></td>
+            <td class="actions"><button type="button" class="edit-btn" title="แก้ไขรายการ" onclick="editTransaction(${t.id})"><i data-lucide="pencil"></i></button><button type="button" class="delete-btn" title="ลบรายการ" onclick="deleteTransaction(${t.id})"><i data-lucide="trash-2"></i></button></td>
         `;
         if (t.type === 'income') {
             incomeList.appendChild(tr);
@@ -702,10 +757,10 @@ function renderTables(transactions) {
 }
 
 async function deleteTransaction(id) {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) return;
+    if (!await requestConfirmation('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) return;
     try {
         const res = await fetch(`${API_URL}/expenses/${id}`, { method: 'DELETE' });
-        if (res.ok) fetchTransactions();
+        if (res.ok) { await fetchTransactions(); showToast('ลบรายการเรียบร้อยแล้ว'); }
         else alert('ไม่สามารถลบรายการได้');
     } catch (e) {
         console.error(e);
@@ -718,13 +773,14 @@ async function deleteAllByType(type) {
     if (!visible.length) return;
 
     const label = type === 'income' ? 'รายรับ' : 'รายจ่าย';
-    if (!confirm(`ต้องการลบ${label}ที่แสดงอยู่ทั้งหมด (${visible.length} รายการ) หรือไม่?`)) return;
+    if (!await requestConfirmation(`ต้องการลบ${label}ที่แสดงอยู่ทั้งหมด (${visible.length} รายการ) หรือไม่?`)) return;
 
     try {
         const params = { type };
         if (currentFilter !== 'all') params.owner = currentFilter;
         await bulkDelete(params);
         await fetchTransactions();
+        showToast(`ลบ${label}เรียบร้อยแล้ว`);
     } catch (e) {
         console.error(e);
         alert('ไม่สามารถลบรายการได้');

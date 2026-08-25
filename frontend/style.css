@@ -533,6 +533,24 @@ body {
     cursor: pointer;
 }
 
+.edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.edit-btn svg { width: 15px; height: 15px; }
+.edit-btn:hover { color: var(--primary); background: #f0f0ec; }
+.actions { white-space: nowrap; }
+
 .delete-btn svg {
     width: 15px;
     height: 15px;
@@ -574,6 +592,36 @@ body {
     box-shadow: var(--shadow-lg);
     animation: modal-in 0.2s ease-out;
 }
+
+.confirm-card { max-width: 360px; text-align: center; }
+.confirm-card h2 { justify-content: center; margin-bottom: 0.5rem; }
+.confirm-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
+.confirm-icon {
+    width: 42px; height: 42px; margin: 0 auto 0.75rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--expense); background: #fcedeC;
+}
+.confirm-icon svg { width: 20px; height: 20px; }
+.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.confirm-actions .btn { min-height: 42px; }
+.btn-secondary { color: var(--text); background: var(--bg); border: 1px solid var(--border); }
+.btn-secondary:hover { color: var(--text); background: #eeeeea; }
+.btn-danger { background: var(--expense); }
+.btn-danger:hover { background: var(--expense-hover); }
+
+.toast-region {
+    position: fixed; z-index: 500; top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 1rem);
+    left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 0.5rem;
+    width: min(360px, calc(100% - 2rem)); pointer-events: none;
+}
+.toast {
+    display: flex; align-items: center; gap: 0.55rem; padding: 0.8rem 1rem; border-radius: 10px;
+    color: #fff; background: #1f7a5c; box-shadow: var(--shadow-lg); font-size: 0.85rem;
+    opacity: 0; transform: translateY(-8px); transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast svg { width: 18px; height: 18px; flex-shrink: 0; }
+.toast-error { background: var(--expense); }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
