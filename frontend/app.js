@@ -909,41 +909,30 @@ function updateTrendChart(transactions) {
     if (hint) hint.textContent = series.hint;
 
     const ctx = document.getElementById('balanceChart').getContext('2d');
-    const incomeFill = ctx.createLinearGradient(0, 0, 0, 260);
-    incomeFill.addColorStop(0, 'rgba(31, 122, 92, 0.12)');
-    incomeFill.addColorStop(1, 'rgba(31, 122, 92, 0)');
-    const expenseFill = ctx.createLinearGradient(0, 0, 0, 260);
-    expenseFill.addColorStop(0, 'rgba(196, 80, 74, 0.12)');
-    expenseFill.addColorStop(1, 'rgba(196, 80, 74, 0)');
-
     balanceChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: series.labels,
             datasets: [
                 {
                     label: 'รายรับ',
                     data: series.income,
+                    backgroundColor: '#1F7A5C',
                     borderColor: '#1F7A5C',
-                    backgroundColor: incomeFill,
-                    borderWidth: 1.75,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    pointHitRadius: 12
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    stack: 'combined'
                 },
                 {
                     label: 'รายจ่าย',
                     data: series.expense,
+                    backgroundColor: '#C4504A',
                     borderColor: '#C4504A',
-                    backgroundColor: expenseFill,
-                    borderWidth: 1.75,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    pointHitRadius: 12
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    stack: 'combined'
                 }
             ]
         },
@@ -959,17 +948,20 @@ function updateTrendChart(transactions) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: (item) => ` ${item.dataset.label}: ${formatBaht(item.parsed.y)}`
+                        label: (item) => ` ${item.dataset.label}: ${formatBaht(item.parsed.y)}`,
+                        footer: (items) => `รวม: ${formatBaht(items.reduce((sum, item) => sum + item.parsed.y, 0))}`
                     }
                 }
             },
             scales: {
                 x: {
+                    stacked: true,
                     grid: { display: false },
                     ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
                     border: { display: false }
                 },
                 y: {
+                    stacked: true,
                     beginAtZero: true,
                     border: { display: false },
                     grid: { color: '#F0F0EE', drawTicks: false },
