@@ -115,7 +115,7 @@ def delete_expenses(
 
 @app.post("/api/expenses", response_model=schemas.Expense)
 def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)):
-    db_expense = models.Expense(**expense.model_dump())
+    db_expense = models.Expense(**expense.model_dump(exclude_none=True))
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
@@ -127,7 +127,7 @@ def update_expense(expense_id: int, expense: schemas.ExpenseCreate, db: Session 
     db_expense = db.query(models.Expense).filter(models.Expense.id == expense_id).first()
     if not db_expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    for key, value in expense.model_dump().items():
+    for key, value in expense.model_dump(exclude_none=True).items():
         setattr(db_expense, key, value)
     db.commit()
     db.refresh(db_expense)

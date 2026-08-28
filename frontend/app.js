@@ -65,6 +65,13 @@ function formatAmountInput(value) {
     return intFormatted;
 }
 
+function localDateInputValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function setupAmountInput() {
     const input = document.getElementById('amount');
     if (!input) return;
@@ -149,7 +156,11 @@ function openModal(id) {
 
     if (id === 'categoryModal') renderCategoryChips();
     if (id === 'ownerModal') renderOwnerChips();
-    if (id === 'transactionModal') updateDatalists();
+    if (id === 'transactionModal') {
+        const dateInput = document.getElementById('transactionDate');
+        if (!editingTransactionId && !dateInput.value) dateInput.value = localDateInputValue();
+        updateDatalists();
+    }
 }
 
 function showToast(message, type = 'success') {
@@ -185,6 +196,7 @@ function editTransaction(id) {
     document.getElementById('transactionOwner').value = transaction.owner || '';
     document.getElementById('title').value = transaction.title || '';
     document.getElementById('amount').value = formatAmountInput(String(transaction.amount));
+    document.getElementById('transactionDate').value = (transaction.date || '').slice(0, 10);
     document.getElementById('category').value = transaction.category || '';
     document.getElementById(transaction.type === 'income' ? 'btnIncome' : 'btnExpense').click();
     openModal('transactionModal');
@@ -602,6 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('title').value;
         const amount = parseAmountInput(document.getElementById('amount').value);
         const category = document.getElementById('category').value.trim();
+        const date = document.getElementById('transactionDate').value;
 
         if (!Number.isFinite(amount) || amount <= 0) {
             alert('กรุณากรอกจำนวนเงินให้ถูกต้อง');
@@ -612,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${API_URL}/expenses${editingTransactionId ? `/${editingTransactionId}` : ''}`, {
                 method: editingTransactionId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type, owner, title, amount, category })
+                body: JSON.stringify({ type, owner, title, amount, category, date })
             });
 
             if (response.ok) {
@@ -663,6 +676,7 @@ function resetFormType() {
     document.getElementById('transactionType').value = 'expense';
     document.getElementById('modalCard').className = 'modal-card theme-expense';
     document.getElementById('transactionOwner').value = '';
+    document.getElementById('transactionDate').value = localDateInputValue();
     editingTransactionId = null;
     document.getElementById('transactionModalTitle').innerHTML = '<i data-lucide="plus-circle"></i> เพิ่มรายการ';
     document.getElementById('submitBtn').textContent = 'บันทึก';

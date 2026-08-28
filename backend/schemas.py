@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel
 
 class ExpenseBase(BaseModel):
     type: str
@@ -9,7 +10,8 @@ class ExpenseBase(BaseModel):
     category: str
 
 class ExpenseCreate(ExpenseBase):
-    pass
+    # Omitted dates retain the database default of the current time.
+    date: Optional[datetime] = None
 
 class Expense(ExpenseBase):
     id: int
